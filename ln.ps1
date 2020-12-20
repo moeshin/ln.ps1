@@ -53,10 +53,159 @@ or available locally via: info '(coreutils) ln invocation'
 
 Github: https://github.com/moeshin/ln.ps1"
 
+$files = @()
+$force = $false
+$interactive= $false
+$relative = $false
+$symbolic = $false
+$verbose = $false
+$form = 0
+
 function isAdmin {
     $id = [System.Security.Principal.WindowsIdentity]::GetCurrent()
     $p = new-object System.Security.Principal.WindowsPrincipal $id
     $p.isinrole([security.principal.windowsbuiltinrole]::administrator)
 }
 
-$usage
+function isExist($file) {
+    return Test-Path "$file"
+}
+
+function isDir($file) {
+    return Test-Path "$file" -PathType Container
+}
+
+function getBasename($path) {
+    return [System.IO.Path]::GetFileName($path)
+}
+function mklink($options, $link, $target) {
+    cmd /c mklink $options "$link" "$target"
+    return $?
+}
+
+function testParams($target, $dest) {
+    if (!$symbolic -and (isDir($target))) {
+        "ln: ${dest}: hard link not allowed for directory"
+        return $false
+    }
+    return $true
+    if (isExist($dest)) {
+        if ($force) {
+            Remove-Item "$dest"
+        } elseif ($interactive) {
+            Write-Host -NoNewline "ln: replace '$dest'? "
+            if ((Read-Host).StartsWith('y', $true, $null)) {
+                Remove-Item "$dest"
+            } else {
+                return $false
+            }
+        }
+        if ($symbolic) {
+            "ln: failed to create symbolic link '$dest': File exists"
+        } else {
+            "ln: failed to create hard link '$dest': File exists"
+        }
+        return $false
+    }
+    return $true
+}
+
+function lnToDir($target, $dir) {
+    $basename = getBasename($target)
+    $dest = Join-Path "$dir", "$basename"
+    if (testParams($target, $dest)) {
+        if (mklink('', $dest, $target)) {
+            if ($verbose) {
+                "'$dest' $($symbolic ? '->' : '=>') '$target'"
+            }
+        }
+    }
+}
+
+foreach ($arg in $args)
+{
+    if (!$arg.StartsWith('-'))
+    {
+        $files = $arg
+        continue
+    }
+    switch -CaseSensitive ($arg)
+    {
+        "--help" {
+            $usage
+            exit
+        }
+        {$_ -ceq '-d' -or $_ -ceq '-F' -or $_ -ceq '--directory'} {
+            "ln: hard link not allowed for directory in Winodws"
+            exit
+        }
+        {$_ -ceq '-s' -or $_ -ceq '--symbolic'} {
+            $symbolic = $true
+            break
+        }
+        {$_ -ceq '-f' -or $_ -ceq '--force'} {
+            $force = $true
+            break
+        }
+        {$_ -ceq '-i' -or $_ -ceq '--interactive'} {
+            $interactive = $true
+            break
+        }
+        {$_ -ceq '-r' -or $_ -ceq '--relative'} {
+            $relative = $true
+            break
+        }
+        {$_ -ceq '-t' -or $_ -ceq '--target-directory'} {
+            $form = 1
+            break
+        }
+        {$_ -ceq '-T' -or $_ -ceq '--no-target-directory'} {
+            $form = 4
+            break
+        }
+        {$_ -ceq '-v' -or $_ -ceq '--verbose'} {
+            $verbose = $true
+            break
+        }
+        default {
+            "ln: invalid option -- '$_'"
+            "Try 'ln --help' for more information."
+            exit 1
+        }
+    }
+}
+
+$len = $files.Count
+
+switch ($len) {
+    0 {
+        "ln: missing file operand"
+        "Try 'ln --help' for more information."
+        exit 1
+    }
+    1 {
+        $form = 2
+        break
+    }
+    2 {
+        if ($form -eq 0) {
+            $form = isDir($files[1]) ? 3 : 1
+        }
+        break
+    }
+    default {
+        if ($form -eq 0) {
+            $form = 3
+        }
+    }
+}
+
+switch ($form) {
+    2 {
+        lnToDir .. .
+        break
+    }
+}
+
+"Files:"
+$files
