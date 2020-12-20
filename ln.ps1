@@ -116,7 +116,7 @@ function lnToDir($target, $dir) {
     if (testParams($target, $dest)) {
         if (mklink('', $dest, $target)) {
             if ($verbose) {
-                "'$dest' $($symbolic ? '->' : '=>') '$target'"
+                "'$dest' $(if ($symbolic) {'->'} else {'=>'}) '$target'"
             }
         }
     }
