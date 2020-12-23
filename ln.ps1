@@ -89,6 +89,10 @@ function getBasename($path) {
     return [System.IO.Path]::GetFileName($path)
 }
 
+function pathToDos($path) {
+    return $path.Replace('/', '\')
+}
+
 function mklink($options, $link, $target) {
     sudo_cmd mklink $options $link $target
     return $?
@@ -111,18 +115,19 @@ function testParams($target, $dest) {
                 return $false
             }
         }
-        if ($symbolic) {
-            Write-Host "ln: failed to create symbolic link '$dest': File exists"
-        } else {
-            Write-Host "ln: failed to create hard link '$dest': File exists"
-        }
+        Write-Host "ln: failed to create $linkType link '$dest': File exists"
         return $false
+    }
+    if (!$(isDir $([System.IO.Path]::GetDirectoryName($dest)))) {
+        Write-Host "ln: failed to create $linkType link '$dest': No such file or directory"
+        return $false
+
     }
     return $true
 }
 
 function getAbsolutePath($path) {
-    return $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($path.Replace('/', '\'))
+    return $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($path)
 }
 
 function splitPath($path) {
@@ -226,6 +231,13 @@ foreach ($arg in $args)
 }
 
 $len = $files.Count
+if ($symbolic) {
+    $linkType = 'symbolic'
+    $linkMark = '->'
+} else {
+    $linkType = 'hard'
+    $linkMark = '=>'
+}
 
 switch ($len) {
     0 {
@@ -251,6 +263,18 @@ switch ($len) {
 }
 
 switch ($form) {
+    1 {
+        $target = pathToDos $files[0]
+        $dest = pathToDos $files[1]
+        if (testParams $target $dest) {
+            Write-Host "'$dest' $linkMark '$target'"
+#            if (mklink '' $dest $target) {
+#                if ($verbose) {
+#                    Write-Host "'$dest' $(if ($symbolic) {'->'} else {'=>'}) '$target'"
+#                }
+#            }
+        }
+    }
     2 {
         lnToDir $files[0] .
         break
