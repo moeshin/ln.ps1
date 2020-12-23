@@ -99,7 +99,7 @@ function mklink($options, $link, $target) {
 }
 
 function testParams($target, $dest) {
-    if (!$symbolic -and $(isDir $target)) {
+    if (!$symbolic -and (isDir $target)) {
         Write-Host "ln: ${dest}: hard link not allowed for directory"
         return $false
     }
@@ -118,7 +118,7 @@ function testParams($target, $dest) {
         Write-Host "ln: failed to create $linkType link '$dest': File exists"
         return $false
     }
-    if (!$(isDir $([System.IO.Path]::GetDirectoryName($dest)))) {
+    if (!(isDir ([System.IO.Path]::GetDirectoryName($dest)))) {
         Write-Host "ln: failed to create $linkType link '$dest': No such file or directory"
         return $false
 
