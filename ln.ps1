@@ -118,10 +118,10 @@ function testParams($target, $dest) {
         Write-Host "ln: failed to create $linkType link '$dest': File exists"
         return $false
     }
-    if (!(isDir ([System.IO.Path]::GetDirectoryName($dest)))) {
+    $parent = [System.IO.Path]::GetDirectoryName($dest)
+    if (![String]::IsNullOrEmpty($parent) -and !(isDir $parent)) {
         Write-Host "ln: failed to create $linkType link '$dest': No such file or directory"
         return $false
-
     }
     return $true
 }

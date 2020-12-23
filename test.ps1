@@ -1,14 +1,12 @@
-$a = 1
-
-switch ('') {
-    '' {
-        echo $a
-        $a = $a + 1
-        echo $a
-    }
+function t {
+    Write-Host 233
 }
 
-echo $a
+if (t) {
+    'True'
+} else {
+    'Flase'
+}
 
 exit
 <#
