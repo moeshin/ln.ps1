@@ -67,58 +67,108 @@ function isAdmin {
     $p.isinrole([security.principal.windowsbuiltinrole]::administrator)
 }
 
+$isAdmin = isAdmin
+
+function sudo_cmd {
+    if ($isAdmin) {
+        cmd /c $args
+    } else {
+        sudo cmd /c $args
+    }
+}
+
 function isExist($file) {
-    return Test-Path "$file"
+    return Test-Path $file
 }
 
 function isDir($file) {
-    return Test-Path "$file" -PathType Container
+    return Test-Path $file -PathType Container
 }
 
 function getBasename($path) {
     return [System.IO.Path]::GetFileName($path)
 }
+
 function mklink($options, $link, $target) {
-    cmd /c mklink $options "$link" "$target"
+    sudo_cmd mklink $options $link $target
     return $?
 }
 
 function testParams($target, $dest) {
     if (!$symbolic -and (isDir($target))) {
-        "ln: ${dest}: hard link not allowed for directory"
+        Write-Host "ln: ${dest}: hard link not allowed for directory"
         return $false
     }
-    return $true
-    if (isExist($dest)) {
+    if (isExist $dest) {
         if ($force) {
-            Remove-Item "$dest"
+            Remove-Item $dest
+            return $true
         } elseif ($interactive) {
             Write-Host -NoNewline "ln: replace '$dest'? "
             if ((Read-Host).StartsWith('y', $true, $null)) {
-                Remove-Item "$dest"
+                Remove-Item $dest
             } else {
                 return $false
             }
         }
         if ($symbolic) {
-            "ln: failed to create symbolic link '$dest': File exists"
+            Write-Host "ln: failed to create symbolic link '$dest': File exists"
         } else {
-            "ln: failed to create hard link '$dest': File exists"
+            Write-Host "ln: failed to create hard link '$dest': File exists"
         }
         return $false
     }
     return $true
 }
 
-function lnToDir($target, $dir) {
-    $basename = getBasename($target)
-    $dest = Join-Path "$dir", "$basename"
-    if (testParams($target, $dest)) {
-        if (mklink('', $dest, $target)) {
-            if ($verbose) {
-                "'$dest' $(if ($symbolic) {'->'} else {'=>'}) '$target'"
+function getAbsolutePath($path) {
+    return $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($path.Replace('/', '\'))
+}
+
+function splitPath($path) {
+    return $path.split('\', [StringSplitOptions]::RemoveEmptyEntries)
+}
+
+function getRelativePath($dir, $target) {
+    $dir = getAbsolutePath $dir
+    $target = getAbsolutePath $target
+    $a1 = splitPath $dir
+    $a2 = splitPath $target
+
+    $len1 = $a1.Count
+    $len2 = $a2.Count
+    $len = if ($len1 -lt $len2) {$len1} else {$len2}
+
+    $path = ''
+    for ($i = 0; $i -lt $len; ++$i) {
+        if ($a1[$i] -ne $a2[$i]) {
+            if ($i -eq 0) {
+                # Cannot find relative path on different disk
+                return $target
             }
+            $n = $len1 - $i - 1
+            if ($n -eq 0) {
+                $path += '.\'
+            } elseif ($n -gt 0)  {
+                $path += '..\' * $n
+            }
+            $path += $a2[$i..$len2] -join '\'
+
+            return $path
         }
+    }
+}
+
+function lnToDir($target, $dir) {
+    $basename = getBasename $target
+    $dest = Join-Path $dir $basename
+    if (testParams $target $dest) {
+        Write-Host "'$dest' $(if ($symbolic) {'->'} else {'=>'}) '$target'"
+#        if (mklink '' $dest $target) {
+#            if ($verbose) {
+#                Write-Host "'$dest' $(if ($symbolic) {'->'} else {'=>'}) '$target'"
+#            }
+#        }
     }
 }
 
@@ -126,13 +176,13 @@ foreach ($arg in $args)
 {
     if (!$arg.StartsWith('-'))
     {
-        $files = $arg
+        $files += $arg
         continue
     }
     switch -CaseSensitive ($arg)
     {
         "--help" {
-            $usage
+            Write-Host $usage
             exit
         }
         {$_ -ceq '-d' -or $_ -ceq '-F' -or $_ -ceq '--directory'} {
@@ -168,8 +218,8 @@ foreach ($arg in $args)
             break
         }
         default {
-            "ln: invalid option -- '$_'"
-            "Try 'ln --help' for more information."
+            Write-Host "ln: invalid option -- '$_'"
+            Write-Host "Try 'ln --help' for more information."
             exit 1
         }
     }
@@ -179,8 +229,8 @@ $len = $files.Count
 
 switch ($len) {
     0 {
-        "ln: missing file operand"
-        "Try 'ln --help' for more information."
+        Write-Host "ln: missing file operand"
+        Write-Host "Try 'ln --help' for more information."
         exit 1
     }
     1 {
@@ -189,7 +239,7 @@ switch ($len) {
     }
     2 {
         if ($form -eq 0) {
-            $form = isDir($files[1]) ? 3 : 1
+            $form = if (isDir $files[1]) {3} else {1}
         }
         break
     }
@@ -202,10 +252,13 @@ switch ($len) {
 
 switch ($form) {
     2 {
-        lnToDir .. .
+        lnToDir $files[0] .
         break
+    }
+    3 {
+        lnToDir $files[0] $files[1]
     }
 }
 
-"Files:"
-$files
+#"Files:"
+#$files
