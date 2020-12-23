@@ -1,4 +1,16 @@
+$a = 1
 
+switch ('') {
+    '' {
+        echo $a
+        $a = $a + 1
+        echo $a
+    }
+}
+
+echo $a
+
+exit
 <#
 ln -s -v -r a test
 'test/a' -> '../a'

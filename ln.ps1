@@ -69,7 +69,7 @@ function isAdmin {
 
 $isAdmin = isAdmin
 
-function sudo_cmd {
+function sudoCmd {
     if ($isAdmin) {
         cmd /c $args
     } else {
@@ -94,12 +94,12 @@ function pathToDos($path) {
 }
 
 function mklink($options, $link, $target) {
-    sudo_cmd mklink $options $link $target
+    sudoCmd mklink $options $link $target
     return $?
 }
 
 function testParams($target, $dest) {
-    if (!$symbolic -and (isDir($target))) {
+    if (!$symbolic -and $(isDir $target)) {
         Write-Host "ln: ${dest}: hard link not allowed for directory"
         return $false
     }
@@ -135,6 +135,8 @@ function splitPath($path) {
 }
 
 function getRelativePath($dir, $target) {
+    $dir = pathToDos $dir
+    $target = pathToDos $target
     $dir = getAbsolutePath $dir
     $target = getAbsolutePath $target
     $a1 = splitPath $dir
@@ -165,15 +167,19 @@ function getRelativePath($dir, $target) {
 }
 
 function lnToDir($target, $dir) {
+    $target = pathToDos $target
+    $dir = pathToDos $dir
     $basename = getBasename $target
     $dest = Join-Path $dir $basename
     if (testParams $target $dest) {
-        Write-Host "'$dest' $(if ($symbolic) {'->'} else {'=>'}) '$target'"
-#        if (mklink '' $dest $target) {
-#            if ($verbose) {
-#                Write-Host "'$dest' $(if ($symbolic) {'->'} else {'=>'}) '$target'"
-#            }
-#        }
+        if (isDir $target) {
+            $options += '/D'
+        }
+        if (mklink $options $dest $target) {
+            if ($verbose) {
+                Write-Host "'$dest' $linkMark '$target'"
+            }
+        }
     }
 }
 
@@ -234,9 +240,11 @@ $len = $files.Count
 if ($symbolic) {
     $linkType = 'symbolic'
     $linkMark = '->'
+    $options = ''
 } else {
     $linkType = 'hard'
     $linkMark = '=>'
+    $options = '/H'
 }
 
 switch ($len) {
@@ -267,12 +275,14 @@ switch ($form) {
         $target = pathToDos $files[0]
         $dest = pathToDos $files[1]
         if (testParams $target $dest) {
-            Write-Host "'$dest' $linkMark '$target'"
-#            if (mklink '' $dest $target) {
-#                if ($verbose) {
-#                    Write-Host "'$dest' $(if ($symbolic) {'->'} else {'=>'}) '$target'"
-#                }
-#            }
+            if (isDir $target) {
+                $options += '/D'
+            }
+            if (mklink $options $dest $target) {
+                if ($verbose) {
+                    Write-Host "'$dest' $linkMark '$target'"
+                }
+            }
         }
     }
     2 {
