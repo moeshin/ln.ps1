@@ -105,7 +105,7 @@ function testParams($target, $dest) {
     }
     if (isExist $dest) {
         if ($force) {
-            Remove-Item $dest
+            (Get-Item $dest).Delete()
             return $true
         } elseif ($interactive) {
             Write-Host -NoNewline "ln: replace '$dest'? "
@@ -284,13 +284,16 @@ switch ($form) {
                 }
             }
         }
+        break
     }
     2 {
         lnToDir $files[0] .
         break
     }
     3 {
+        
         lnToDir $files[0] $files[1]
+        break
     }
 }
 
