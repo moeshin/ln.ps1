@@ -1,3 +1,4 @@
+$version = '1.0.0'
 $usage = "Usage: ln [OPTION]... [-T] TARGET LINK_NAME   (1st form)
   or:  ln [OPTION]... TARGET                  (2nd form)
   or:  ln [OPTION]... TARGET... DIRECTORY     (3rd form)
@@ -49,8 +50,6 @@ behavior when a TARGET is a symbolic link, defaulting to -P.
 
 GNU coreutils online help: <http://www.gnu.org/software/coreutils/>
 Full documentation at: <http://www.gnu.org/software/coreutils/ln>
-or available locally via: info '(coreutils) ln invocation'
-
 Github: https://github.com/moeshin/ln.ps1"
 
 $files = @()
@@ -85,8 +84,20 @@ function isDir($file) {
     return Test-Path $file -PathType Container
 }
 
+function isTargetDir($file) {
+    return $file.EndsWith('\') -or (isDir $file)
+}
+
 function getBasename($path) {
-    return [System.IO.Path]::GetFileName($path)
+    if ($path.EndsWith('\')) {
+        return [System.IO.Path]::GetDirectoryName($path)
+    } else {
+        return [System.IO.Path]::GetFileName($path)
+    }
+}
+
+function getDirName($path) {
+    return [System.IO.Path]::getBasename($path)
 }
 
 function pathToDos($path) {
@@ -99,7 +110,7 @@ function mklink($options, $link, $target) {
 }
 
 function testParams($target, $dest) {
-    if (!$symbolic -and (isDir $target)) {
+    if (!$symbolic -and (isTargetDir $target)) {
         Write-Host "ln: ${dest}: hard link not allowed for directory"
         return $false
     }
@@ -170,9 +181,11 @@ function lnToDir($target, $dir) {
     $target = pathToDos $target
     $dir = pathToDos $dir
     $basename = getBasename $target
+    echo $basename
+    exit
     $dest = Join-Path $dir $basename
     if (testParams $target $dest) {
-        if (isDir $target) {
+        if (isTargetDir $target) {
             $options += '/D'
         }
         if (mklink $options $dest $target) {
@@ -194,6 +207,10 @@ foreach ($arg in $args)
     {
         "--help" {
             Write-Host $usage
+            exit
+        }
+        "--version" {
+            Write-Host $version
             exit
         }
         {$_ -ceq '-d' -or $_ -ceq '-F' -or $_ -ceq '--directory'} {
@@ -275,7 +292,7 @@ switch ($form) {
         $target = pathToDos $files[0]
         $dest = pathToDos $files[1]
         if (testParams $target $dest) {
-            if (isDir $target) {
+            if (isTargetDir $target) {
                 $options += '/D'
             }
             if (mklink $options $dest $target) {
