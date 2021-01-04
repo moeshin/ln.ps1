@@ -254,10 +254,7 @@ function foreachArgs($arg) {
 }
 
 foreach ($arg in $args) {
-    if ($arg -eq '-') {
-        continue
-    }
-    if (!$arg.StartsWith('-')) {
+    if ($arg -eq '-' -or !$arg.StartsWith('-')) {
         $files += $arg
         continue
     }
