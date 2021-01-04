@@ -195,6 +195,7 @@ function lnToDir($target, $dir) {
 }
 
 function foreachArgs($arg) {
+    echo $arg
     switch -CaseSensitive ($arg) {
         '--help' {
             Write-Host $usage
@@ -239,11 +240,12 @@ function foreachArgs($arg) {
         default {
             $_args = $_.Substring(1);
             if (!$_args.StartsWith('-')) {
-                $len = $_args.Length
-                for($i=1; $i -le $len; $i++)
-                {
-                    echo foreachArgs "-$_arg"
+                $len = $_args.Length - 1
+                for($i=0; $i -le $len; $i++) {
+                    $_arg = $_args[$i]
+                    foreachArgs "-$_arg"
                 }
+                return
             }
             Write-Host "ln: invalid option -- '$_'"
             Write-Host "Try 'ln --help' for more information."
