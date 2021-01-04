@@ -195,7 +195,6 @@ function lnToDir($target, $dir) {
 }
 
 function foreachArgs($arg) {
-    echo $arg
     switch -CaseSensitive ($arg) {
         '--help' {
             Write-Host $usage
@@ -255,6 +254,9 @@ function foreachArgs($arg) {
 }
 
 foreach ($arg in $args) {
+    if ($arg -eq '-') {
+        continue
+    }
     if (!$arg.StartsWith('-')) {
         $files += $arg
         continue
