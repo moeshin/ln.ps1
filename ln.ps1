@@ -194,20 +194,13 @@ function lnToDir($target, $dir) {
     }
 }
 
-foreach ($arg in $args)
-{
-    if (!$arg.StartsWith('-'))
-    {
-        $files += $arg
-        continue
-    }
-    switch -CaseSensitive ($arg)
-    {
-        "--help" {
+function foreachArgs($arg) {
+    switch -CaseSensitive ($arg) {
+        '--help' {
             Write-Host $usage
             exit
         }
-        "--version" {
+        '--version' {
             Write-Host $version
             exit
         }
@@ -216,39 +209,56 @@ foreach ($arg in $args)
             exit
         }
         {$_ -ceq '-s' -or $_ -ceq '--symbolic'} {
-            $symbolic = $true
+            $script:symbolic = $true
             break
         }
         {$_ -ceq '-f' -or $_ -ceq '--force'} {
-            $force = $true
+            $script:force = $true
             break
         }
         {$_ -ceq '-i' -or $_ -ceq '--interactive'} {
-            $interactive = $true
+            $script:interactive = $true
             break
         }
         {$_ -ceq '-r' -or $_ -ceq '--relative'} {
-            $relative = $true
+            $script:relative = $true
             break
         }
         {$_ -ceq '-t' -or $_ -ceq '--target-directory'} {
-            $form = 1
+            $script:form = 1
             break
         }
         {$_ -ceq '-T' -or $_ -ceq '--no-target-directory'} {
-            $form = 4
+            $script:form = 4
             break
         }
         {$_ -ceq '-v' -or $_ -ceq '--verbose'} {
-            $verbose = $true
+            $script:verbose = $true
             break
         }
         default {
+            $_args = $_.Substring(1);
+            if (!$_args.StartsWith('-')) {
+                $len = $_args.Length - 1
+                for($i=0; $i -le $len; $i++) {
+                    $_arg = $_args[$i]
+                    foreachArgs "-$_arg"
+                }
+                return
+            }
             Write-Host "ln: invalid option -- '$_'"
             Write-Host "Try 'ln --help' for more information."
             exit 1
         }
     }
+}
+
+foreach ($arg in $args) {
+    if ($arg -eq '-' -or !$arg.StartsWith('-')) {
+        $files += $arg
+        continue
+    }
+    foreachArgs $arg
 }
 
 $len = $files.Count
