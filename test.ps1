@@ -1,12 +1,15 @@
-function t {
-    Write-Host 233
-}
-
-if (t) {
-    'True'
-} else {
-    'Flase'
-}
+<# todo impoert kernel32.dll
+$kernel = Add-Type '
+using System;
+using System.Runtime.InteropServices;
+public class kernel32 {
+	[DllImport("kernel32.dll")]
+	public static extern bool CreateSymbolicLink(string lpSymlinkFileName, string lpTargetFileName, uint dwFlags);
+	[DllImport("kernel32.dll")]
+	public static extern bool CreateHardLink(string lpFileName, string lpExistingFileName, IntPtr lpSecurityAttributes);
+}'
+$kernel::CreateSymbolicLink
+#>
 
 exit
 <#

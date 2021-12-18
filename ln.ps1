@@ -181,8 +181,6 @@ function lnToDir($target, $dir) {
     $target = pathToDos $target
     $dir = pathToDos $dir
     $basename = getBasename $target
-    echo $basename
-    exit
     $dest = Join-Path $dir $basename
     if (testParams $target $dest) {
         if (isTargetDir $target) {
